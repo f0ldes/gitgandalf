@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN') #token here
 AUTHROIZED_CHAT_IDS = [int(chat_id) for chat_id in 
-                       os.getnv('AUTHORIZED_CHAT_IDS').split(',')]
+                       os.getenv('AUTHORIZED_CHAT_IDS').split(',')]
 bot = telegram.Bot(token=BOT_TOKEN)
 
 @app.route('/webhook', methods=['POST'])
