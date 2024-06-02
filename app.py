@@ -29,37 +29,26 @@ def webhook():
     if request.method == 'POST':
         data = request.json
         logger.info(f"Payload: {data}")
-        chat_id = None
 
-        # Extract chat ID from the incoming update
-        if 'message' in data:
-            chat_id = data['message']['chat']['id']
-        elif 'channel_post' in data:
-            chat_id = data['channel_post']['chat']['id']
-        
-        logger.info(f"Chat ID: {chat_id}")
+        # Check if it's a push event to the main branch
+        if 'ref' in data and data['ref'] == 'refs/heads/main':
+            logger.info("Push to main branch detected")
+            if 'head_commit' in data:
+                commit = data['head_commit']
+                message = (f"New push to main by {commit['author']['name']}:\n"
+                           f"{commit['message']}\n"
+                           f"{commit['url']}")
+                logger.info(f"Sending message: {message}")
 
-        # Check if the chat ID is authorized
-        if chat_id in AUTHORIZED_CHAT_IDS:
-            logger.info("Chat ID is authorized")
-            
-            # Process the webhook payload to get the necessary information
-            if 'ref' in data and data['ref'] == 'refs/heads/main':
-                logger.info("Push to main branch detected")
-                if 'head_commit' in data:
-                    commit = data['head_commit']
-                    message = (f"New push to main by {commit['author']['name']}:\n"
-                               f"{commit['message']}\n"
-                               f"{commit['url']}")
-                    logger.info(f"Sending message: {message}")
+                # Send message to all authorized chat IDs
+                for chat_id in AUTHORIZED_CHAT_IDS:
                     bot.send_message(chat_id=chat_id, text=message)
-                    logger.info("Message sent successfully")
-                else:
-                    logger.info("No head_commit found in the payload")
+                    logger.info(f"Message sent to {chat_id}")
+
             else:
-                logger.info("Not a push to the main branch")
+                logger.info("No head_commit found in the payload")
         else:
-            logger.info("Chat ID is not authorized")
+            logger.info("Not a push to the main branch")
         
         return jsonify({'status': 'success'}), 200
 
