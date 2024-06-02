@@ -12,9 +12,14 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
-# Set up your bot token
+# Verify environment variables
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-AUTHORIZED_CHAT_IDS = [int(chat_id) for chat_id in os.getenv('AUTHORIZED_CHAT_IDS').split(',')]
+AUTHORIZED_CHAT_IDS = os.getenv('AUTHORIZED_CHAT_IDS')
+logger.info(f"BOT_TOKEN: {BOT_TOKEN}")
+logger.info(f"AUTHORIZED_CHAT_IDS: {AUTHORIZED_CHAT_IDS}")
+
+# Convert AUTHORIZED_CHAT_IDS to a list of integers
+AUTHORIZED_CHAT_IDS = [int(chat_id) for chat_id in AUTHORIZED_CHAT_IDS.split(',')]
 bot = telegram.Bot(token=BOT_TOKEN)
 
 @app.route('/webhook', methods=['POST'])
