@@ -4,22 +4,25 @@ import os
 import logging
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv()  # Load environment variables from .env file
 
 app = Flask(__name__)
 
-BOT_TOKEN = os.getenv('BOT_TOKEN') #token here
-AUTHOROIZED_CHAT_IDS = [int(chat_id) for chat_id in 
-                       os.getenv('AUTHORIZED_CHAT_IDS').split(',')]
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
+
+# Set up your bot token
+BOT_TOKEN = os.getenv('BOT_TOKEN')
 bot = telegram.Bot(token=BOT_TOKEN)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    logging.info("Webhook received!")
+    logger.info("Webhook received!")
     
     if request.method == 'POST':
         data = request.json
-        logging.info(f"Payload: {data}")
+        logger.info(f"Payload: {data}")
         chat_id = None
 
         # Extract chat ID from the incoming update
@@ -28,31 +31,37 @@ def webhook():
         elif 'channel_post' in data:
             chat_id = data['channel_post']['chat']['id']
         
-        logging.info(f"Chat ID: {chat_id}")
+        logger.info(f"Chat ID: {chat_id}")
 
         # Check if the chat ID is authorized
-        if chat_id in AUTHOROIZED_CHAT_IDS:
-            logging.info("Chat ID is authorized")
+        if chat_id in AUTHORIZED_CHAT_IDS:
+            logger.info("Chat ID is authorized")
             
             # Process the webhook payload to get the necessary information
-            # Example for GitHub:
             if 'ref' in data and data['ref'] == 'refs/heads/main':
+                logger.info("Push to main branch detected")
                 if 'head_commit' in data:
                     commit = data['head_commit']
                     message = (f"New push to main by {commit['author']['name']}:\n"
                                f"{commit['message']}\n"
                                f"{commit['url']}")
-                    logging.info(f"Sending message: {message}")
+                    logger.info(f"Sending message: {message}")
                     bot.send_message(chat_id=chat_id, text=message)
-                    logging.info("Message sent successfully")
+                    logger.info("Message sent successfully")
                 else:
-                    logging.info("No head_commit found in the payload")
+                    logger.info("No head_commit found in the payload")
             else:
-                logging.info("Not a push to the main branch")
+                logger.info("Not a push to the main branch")
         else:
-            logging.info("Chat ID is not authorized")
+            logger.info("Chat ID is not authorized")
         
         return jsonify({'status': 'success'}), 200
+
+@app.route('/start', methods=['GET'])
+def start():
+    bot.send_message(chat_id=os.getenv('AUTHORIZED_CHAT_IDS').split(',')[0], text="Bot is running and ready to send messages.")
+    return 'Bot started!', 200
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0' ,port=port)
+    app.run(host='0.0.0.0', port=port)
