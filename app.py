@@ -14,6 +14,7 @@ logger = logging.getLogger()
 
 # Set up your bot token
 BOT_TOKEN = os.getenv('BOT_TOKEN')
+AUTHORIZED_CHAT_IDS = [int(chat_id) for chat_id in os.getenv('AUTHORIZED_CHAT_IDS').split(',')]
 bot = telegram.Bot(token=BOT_TOKEN)
 
 @app.route('/webhook', methods=['POST'])
@@ -59,7 +60,8 @@ def webhook():
 
 @app.route('/start', methods=['GET'])
 def start():
-    bot.send_message(chat_id=os.getenv('AUTHORIZED_CHAT_IDS').split(',')[0], text="Bot is running and ready to send messages.")
+    first_chat_id = AUTHORIZED_CHAT_IDS[0]
+    bot.send_message(chat_id=first_chat_id, text="Bot is running and ready to send messages.")
     return 'Bot started!', 200
 
 if __name__ == '__main__':
