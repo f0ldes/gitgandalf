@@ -3,6 +3,7 @@ import telegram
 import os
 import logging
 from dotenv import load_dotenv
+import asyncio
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -21,6 +22,9 @@ logger.info(f"AUTHORIZED_CHAT_IDS: {AUTHORIZED_CHAT_IDS}")
 # Convert AUTHORIZED_CHAT_IDS to a list of integers
 AUTHORIZED_CHAT_IDS = [int(chat_id) for chat_id in AUTHORIZED_CHAT_IDS.split(',')]
 bot = telegram.Bot(token=BOT_TOKEN)
+
+async def send_message(chat_id, text):
+    await bot.send_message(chat_id=chat_id, text=text)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -42,7 +46,7 @@ def webhook():
 
                 # Send message to all authorized chat IDs
                 for chat_id in AUTHORIZED_CHAT_IDS:
-                    bot.send_message(chat_id=chat_id, text=message)
+                    asyncio.run(send_message(chat_id, message))
                     logger.info(f"Message sent to {chat_id}")
 
             else:
@@ -55,7 +59,7 @@ def webhook():
 @app.route('/start', methods=['GET'])
 def start():
     first_chat_id = AUTHORIZED_CHAT_IDS[0]
-    bot.send_message(chat_id=first_chat_id, text="Bot is running and ready to send messages.")
+    asyncio.run(send_message(first_chat_id, "Bot is running and ready to send messages."))
     return 'Bot started!', 200
 
 if __name__ == '__main__':
