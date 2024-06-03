@@ -4,6 +4,7 @@ import os
 import logging
 from dotenv import load_dotenv
 import asyncio
+from telegram.request import HTTPXRequest
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -21,7 +22,16 @@ logger.info(f"AUTHORIZED_CHAT_IDS: {AUTHORIZED_CHAT_IDS}")
 
 # Convert AUTHORIZED_CHAT_IDS to a list of integers
 AUTHORIZED_CHAT_IDS = [int(chat_id) for chat_id in AUTHORIZED_CHAT_IDS.split(',')]
-bot = telegram.Bot(token=BOT_TOKEN)
+
+# Set up custom request with increased pool size and timeout
+request = HTTPXRequest(
+    pool_connections=10,  # Increase pool size
+    pool_maxsize=10,      # Increase max size of the pool
+    pool_block=True,      # Block until a connection is available
+    timeout=30            # Increase timeout
+)
+
+bot = telegram.Bot(token=BOT_TOKEN, request=request)
 
 async def send_message(chat_id, text):
     try:
