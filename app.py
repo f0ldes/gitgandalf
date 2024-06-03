@@ -24,7 +24,11 @@ AUTHORIZED_CHAT_IDS = [int(chat_id) for chat_id in AUTHORIZED_CHAT_IDS.split(','
 bot = telegram.Bot(token=BOT_TOKEN)
 
 async def send_message(chat_id, text):
-    await bot.send_message(chat_id=chat_id, text=text)
+    try:
+        await bot.send_message(chat_id=chat_id, text=text)
+        logger.info(f"Message sent to {chat_id}")
+    except Exception as e:
+        logger.error(f"Error sending message to {chat_id}: {e}")
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -39,15 +43,14 @@ def webhook():
             logger.info("Push to main branch detected")
             if 'head_commit' in data:
                 commit = data['head_commit']
-                message = (f"New merge by {commit['author']['name']}:\n"
+                message = (f"New push to main by {commit['author']['name']}:\n"
                            f"{commit['message']}\n"
                            f"{commit['url']}")
                 logger.info(f"Sending message: {message}")
 
                 # Send message to all authorized chat IDs
                 for chat_id in AUTHORIZED_CHAT_IDS:
-                    asyncio.run(send_message(chat_id, message))
-                    logger.info(f"Message sent to {chat_id}")
+                    asyncio.create_task(send_message(chat_id, message))
 
             else:
                 logger.info("No head_commit found in the payload")
@@ -59,7 +62,7 @@ def webhook():
 @app.route('/start', methods=['GET'])
 def start():
     first_chat_id = AUTHORIZED_CHAT_IDS[0]
-    asyncio.run(send_message(first_chat_id, "Bot is running and ready to send messages."))
+    asyncio.create_task(send_message(first_chat_id, "Bot is running and ready to send messages."))
     return 'Bot started!', 200
 
 if __name__ == '__main__':
