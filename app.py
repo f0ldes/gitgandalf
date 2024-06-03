@@ -23,13 +23,8 @@ logger.info(f"AUTHORIZED_CHAT_IDS: {AUTHORIZED_CHAT_IDS}")
 # Convert AUTHORIZED_CHAT_IDS to a list of integers
 AUTHORIZED_CHAT_IDS = [int(chat_id) for chat_id in AUTHORIZED_CHAT_IDS.split(',')]
 
-# Set up custom request with increased pool size and timeout
-request = HTTPXRequest(
-    pool_connections=10,  # Increase pool size
-    pool_maxsize=10,      # Increase max size of the pool
-    pool_block=True,      # Block until a connection is available
-    timeout=30            # Increase timeout
-)
+# Configure the HTTPXRequest with custom pool settings
+request = HTTPXRequest(connection_pool_size=10)
 
 bot = telegram.Bot(token=BOT_TOKEN, request=request)
 
