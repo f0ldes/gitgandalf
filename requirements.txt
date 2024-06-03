@@ -3,7 +3,6 @@ anyio==4.4.0
 blinker==1.8.2
 certifi==2024.2.2
 click==8.1.7
-Flask==3.0.3
 h11==0.14.0
 h2==4.1.0
 hpack==4.0.0
