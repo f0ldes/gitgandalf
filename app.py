@@ -42,7 +42,7 @@ async def webhook():
     logger.info(f"Payload: {data}")
 
     # Check if it's a push event to the main branch
-    if 'ref' in data and data['ref'] == 'refs/heads/main':
+    if 'ref' in data and (data['ref'] == 'refs/heads/main' or data['ref'] == 'res/heads/master'):
         logger.info("Push to main branch detected")
         if 'head_commit' in data:
             commit = data['head_commit']
