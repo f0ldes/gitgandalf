@@ -39,7 +39,7 @@ def webhook():
             logger.info("Push to main branch detected")
             if 'head_commit' in data:
                 commit = data['head_commit']
-                message = (f"New push to main by {commit['author']['name']}:\n"
+                message = (f"New merge by {commit['author']['name']}:\n"
                            f"{commit['message']}\n"
                            f"{commit['url']}")
                 logger.info(f"Sending message: {message}")
