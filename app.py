@@ -35,6 +35,14 @@ async def send_message(chat_id, text):
     except Exception as e:
         logger.error(f"Error sending message to {chat_id}: {e}")
 
+def run_async(func):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(func)
+    finally:
+        loop.close()
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     logger.info("Webhook received!")
@@ -55,7 +63,7 @@ def webhook():
 
                 # Send message to all authorized chat IDs
                 for chat_id in AUTHORIZED_CHAT_IDS:
-                    asyncio.create_task(send_message(chat_id, message))
+                    run_async(send_message(chat_id, message))
 
             else:
                 logger.info("No head_commit found in the payload")
@@ -67,13 +75,9 @@ def webhook():
 @app.route('/start', methods=['GET'])
 def start():
     first_chat_id = AUTHORIZED_CHAT_IDS[0]
-    asyncio.create_task(send_message(first_chat_id, "Bot is running and ready to send messages."))
+    run_async(send_message(first_chat_id, "Bot is running and ready to send messages."))
     return 'Bot started!', 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    loop = asyncio.get_event_loop()
-    if loop.is_running():
-        asyncio.ensure_future(app.run(host='0.0.0.0', port=port))
-    else:
-        loop.run_until_complete(app.run(host='0.0.0.0', port=port))
+    app.run(host='0.0.0.0', port=port)
