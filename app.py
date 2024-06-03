@@ -1,5 +1,5 @@
 from quart import Quart, request, jsonify
-import telegram
+from telegram import Bot
 import os
 import logging
 from dotenv import load_dotenv
@@ -25,7 +25,7 @@ AUTHORIZED_CHAT_IDS = [int(chat_id) for chat_id in AUTHORIZED_CHAT_IDS.split(','
 # Configure the HTTPXRequest with custom pool settings
 tg_request = HTTPXRequest(connection_pool_size=10)
 
-bot = telegram.Bot(token=BOT_TOKEN, request=tg_request)
+bot = Bot(token=BOT_TOKEN, request=tg_request)
 
 async def send_message(chat_id, text):
     try:
