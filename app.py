@@ -66,8 +66,9 @@ async def webhook():
             logger.info("Push to main or master branch detected")
             if 'head_commit' in data and 'head_commit' in update_mapping:
                 commit = data['head_commit']
-                message = (f"New push to main/master by {commit['author']['name']}:\n"
-                           f"Branch: {data['ref'].split('/')[-1]}\n"
+                branch = data['ref'].split('/')[-1]
+                message = (f"New push to {branch} by {commit['author']['name']}:\n"
+                           f"Branch: {branch}\n"
                            f"Message: {commit['message']}\n"
                            f"Link: {commit['url']}")
                 logger.info(f"Sending message: {message}")
@@ -77,13 +78,14 @@ async def webhook():
                     await send_message(chat_id, message)
 
         # Check for pull request events
-        elif 'pull_request' in data and 'pull_request' in update_mapping:
+        elif 'pull_request' in data:
             pr = data['pull_request']
-            if pr['state'] == 'open':
+            base_branch = pr['base']['ref']
+            if pr['state'] == 'open' and base_branch in ['main', 'master']:
                 pr_message = (f"Pull request by {pr['user']['login']}:\n"
-                              f"Branch: {pr['head']['ref']}\n"
+                              f"Branch: {pr['head']['ref']} -> {base_branch}\n"
                               f"Message: {pr['title']}\n"
-                              f"commitmessage: {pr['body']}\n"
+                              f"Commit message: {pr['body']}\n"
                               f"Link: {pr['html_url']}")
                 logger.info(f"Sending pull request message: {pr_message}")
 
@@ -95,7 +97,7 @@ async def webhook():
                 # await send_message(SPECIAL_CHAT_ID, pr_message)
 
         else:
-            logger.info("Not a push to the main or master branch")
+            logger.info("Not a push to the main or master branch and not a relevant pull request")
         
         return jsonify({'status': 'success'}), 200
 
