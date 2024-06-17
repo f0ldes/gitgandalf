@@ -1,8 +1,9 @@
 from quart import Quart, request, jsonify
-from telegram import Bot
+import telegram
 import os
 import logging
 from dotenv import load_dotenv
+import asyncio
 from telegram.request import HTTPXRequest
 
 load_dotenv()  # Load environment variables from .env file
@@ -15,17 +16,29 @@ logger = logging.getLogger()
 
 # Verify environment variables
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-AUTHORIZED_CHAT_IDS = os.getenv('AUTHORIZED_CHAT_IDS')
 logger.info(f"BOT_TOKEN: {BOT_TOKEN}")
-logger.info(f"AUTHORIZED_CHAT_IDS: {AUTHORIZED_CHAT_IDS}")
 
-# Convert AUTHORIZED_CHAT_IDS to a list of integers
-AUTHORIZED_CHAT_IDS = [int(chat_id) for chat_id in AUTHORIZED_CHAT_IDS.split(',')]
+# Repository to update type mapping
+REPO_UPDATE_MAPPING = {
+    'portfolio_v2': {
+        'head_commit': [-1002175201609],
+        'pull_request': [-1002175201609, -4192197568],
+    },
+    'abovo-web-employers': {
+        'head_commit': [-4192197568, -4210472507],
+        'pull_request': [-4192197568]
+        # 'head_commit': [-4210472507],
+        # 'pull_request': [-4210472507],
+    },
+}
+
+# Specific chat ID for additional notification on pull request
+SPECIAL_CHAT_ID = -4192197568
 
 # Configure the HTTPXRequest with custom pool settings
 tg_request = HTTPXRequest(connection_pool_size=10)
 
-bot = Bot(token=BOT_TOKEN, request=tg_request)
+bot = telegram.Bot(token=BOT_TOKEN, request=tg_request)
 
 async def send_message(chat_id, text):
     try:
@@ -38,34 +51,60 @@ async def send_message(chat_id, text):
 async def webhook():
     logger.info("Webhook received!")
     
-    data = await request.get_json()
-    logger.info(f"Payload: {data}")
+    if request.method == 'POST':
+        data = await request.get_json()
+        logger.info(f"Payload: {data}")
 
-    # Check if it's a push event to the main branch
-    if 'ref' in data and (data['ref'] == 'refs/heads/main' or data['ref'] == 'refs/heads/master'):
-        logger.info("Push to main branch detected")
-        if 'head_commit' in data:
-            commit = data['head_commit']
-            message = (f"New push to main by {commit['author']['name']}:\n"
-                       f"{commit['message']}\n"
-                       f"{commit['url']}")
-            logger.info(f"Sending message: {message}")
+        repo_name = data['repository']['name'] if 'repository' in data else None
+        if not repo_name or repo_name not in REPO_UPDATE_MAPPING:
+            return jsonify({'status': 'repo not configured'}), 400
+        
+        update_mapping = REPO_UPDATE_MAPPING[repo_name]
 
-            # Send message to all authorized chat IDs
-            for chat_id in AUTHORIZED_CHAT_IDS:
-                await send_message(chat_id, message)
+        # Check for push events to main or master branch
+        if 'ref' in data and (data['ref'] == 'refs/heads/main' or data['ref'] == 'refs/heads/master'):
+            logger.info("Push to main or master branch detected")
+            if 'head_commit' in data and 'head_commit' in update_mapping:
+                commit = data['head_commit']
+                message = (f"New push to main/master by {commit['author']['name']}:\n"
+                           f"Branch: {data['ref'].split('/')[-1]}\n"
+                           f"Message: {commit['message']}\n"
+                           f"Link: {commit['url']}")
+                logger.info(f"Sending message: {message}")
+
+                # Send message to all mapped chat IDs for head_commit
+                for chat_id in update_mapping['head_commit']:
+                    await send_message(chat_id, message)
+
+        # Check for pull request events
+        elif 'pull_request' in data and 'pull_request' in update_mapping:
+            pr = data['pull_request']
+            if pr['state'] == 'open':
+                pr_message = (f"Pull request by {pr['user']['login']}:\n"
+                              f"Branch: {pr['head']['ref']}\n"
+                              f"Message: {pr['title']}\n"
+                              f"commitmessage: {pr['body']}\n"
+                              f"Link: {pr['html_url']}")
+                logger.info(f"Sending pull request message: {pr_message}")
+
+                # Send message to all mapped chat IDs for pull_request
+                for chat_id in update_mapping['pull_request']:
+                    await send_message(chat_id, pr_message)
+
+                # Also send to the special chat ID
+                # await send_message(SPECIAL_CHAT_ID, pr_message)
 
         else:
-            logger.info("No head_commit found in the payload")
-    else:
-        logger.info("Not a push to the main branch")
-    
-    return jsonify({'status': 'success'}), 200
+            logger.info("Not a push to the main or master branch")
+        
+        return jsonify({'status': 'success'}), 200
 
 @app.route('/start', methods=['GET'])
 async def start():
-    first_chat_id = AUTHORIZED_CHAT_IDS[0]
-    await send_message(first_chat_id, "Bot is running and ready to send messages.")
+    for repo, updates in REPO_UPDATE_MAPPING.items():
+        for update_type, chat_ids in updates.items():
+            for chat_id in chat_ids:
+                await send_message(chat_id, f"Bot is running and ready to send {update_type} updates for repository {repo}.")
     return 'Bot started!', 200
 
 if __name__ == '__main__':
