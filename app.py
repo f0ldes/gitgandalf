@@ -32,6 +32,7 @@ REPO_UPDATE_MAPPING = {
     },
 }
 
+
 # Specific chat ID for additional notification on pull request
 SPECIAL_CHAT_ID = -4192197568
 
@@ -62,7 +63,7 @@ async def webhook():
         update_mapping = REPO_UPDATE_MAPPING[repo_name]
 
         # Check for push events to main or master branch
-        if 'ref' in data and (data['ref'] == 'refs/heads/main' or data['ref'] == 'refs/heads/master'):
+        if 'ref' in data and (data['ref'] == 'refs/heads/main' or data['ref'] == 'refs/heads/master' or data['ref'] == 'refs/heads/dev'):
             logger.info("Push to main or master branch detected")
             if 'head_commit' in data and 'head_commit' in update_mapping:
                 commit = data['head_commit']
@@ -81,7 +82,7 @@ async def webhook():
         elif 'pull_request' in data:
             pr = data['pull_request']
             base_branch = pr['base']['ref']
-            if pr['state'] == 'open' and base_branch in ['main', 'master']:
+            if pr['state'] == 'open' and base_branch in ['main', 'master', 'dev']:
                 pr_message = (f"Pull request by {pr['user']['login']}:\n"
                               f"Branch: {pr['head']['ref']} -> {base_branch}\n"
                               f"Message: {pr['title']}\n"
