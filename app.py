@@ -12,7 +12,6 @@ app = Quart(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
-
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 logger.info(f"BOT_TOKEN: {BOT_TOKEN}")
 
@@ -22,21 +21,15 @@ REPO_UPDATE_MAPPING = {
         'pull_request': [-1002175201609, -4192197568],
     },
     'abovo-web-employers': {
-        # -4192197568 -421047250 b2bfront end es abovo server
-        'head_commit': [ 7483219211],
+        'head_commit': [7483219211],
         'pull_request': [7483219211]
-        # 'head_commit': [-4210472507],
-        # 'pull_request': [-4210472507],
     },
 }
 
-
-# additional notification on pull request
-# current: abovo 
-SPECIAL_CHAT_ID = 7483219211 # -4192197568
+# Special chat ID for additional notifications on pull request
+SPECIAL_CHAT_ID = 7483219211  # -4192197568
 
 tg_request = HTTPXRequest(connection_pool_size=10)
-
 bot = telegram.Bot(token=BOT_TOKEN, request=tg_request)
 
 async def send_message(chat_id, text):
@@ -60,9 +53,26 @@ async def webhook():
         
         update_mapping = REPO_UPDATE_MAPPING[repo_name]
 
-        # push events to main or master branch
-        if 'ref' in data and (data['ref'] == 'refs/heads/main' or data['ref'] == 'refs/heads/master' or data['ref'] == 'refs/heads/dev'):
-            logger.info("Push to main or master branch detected")
+        # Check for pull requests
+        if 'pull_request' in data:
+            pr = data['pull_request']
+            base_branch = pr['base']['ref']
+            if pr['state'] in ['open', 'closed'] and base_branch in ['main', 'master', 'dev']:
+                pr_message = (f"Pull request by {pr['user']['login']}:\n"
+                              f"Branch: {pr['head']['ref']} -> {base_branch}\n"
+                              f"Message: {pr['title']}\n"
+                              f"Commit message: {pr['body']}\n"
+                              f"Link: {pr['html_url']}")
+                logger.info(f"Sending pull request message: {pr_message}")
+
+                for chat_id in update_mapping['pull_request']:
+                    await send_message(chat_id, pr_message)
+
+     
+                await send_message(SPECIAL_CHAT_ID, pr_message)
+
+        elif 'ref' in data and (data['ref'] == 'refs/heads/main' or data['ref'] == 'refs/heads/master' or data['ref'] == 'refs/heads/dev'):
+            logger.info("Push to main, master, or dev branch detected")
             if 'head_commit' in data and 'head_commit' in update_mapping:
                 commit = data['head_commit']
                 branch = data['ref'].split('/')[-1]
@@ -76,27 +86,8 @@ async def webhook():
                 for chat_id in update_mapping['head_commit']:
                     await send_message(chat_id, message)
 
-        # Check for pull requests
-        elif 'pull_request' in data:
-            pr = data['pull_request']
-            base_branch = pr['base']['ref']
-            if pr['state'] == 'open' and base_branch in ['main', 'master', 'dev']:
-                pr_message = (f"Pull request by {pr['user']['login']}:\n"
-                              f"Branch: {pr['head']['ref']} -> {base_branch}\n"
-                              f"Message: {pr['title']}\n"
-                              f"Commit message: {pr['body']}\n"
-                              f"Link: {pr['html_url']}")
-                logger.info(f"Sending pull request message: {pr_message}")
-
-                #  all chat IDs for pull_request
-                for chat_id in update_mapping['pull_request']:
-                    await send_message(chat_id, pr_message)
-
-                # Also send to the special chat ID
-                # await send_message(SPECIAL_CHAT_ID, pr_message)
-
         else:
-            logger.info("Not a push to the main or master branch and not a relevant pull request")
+            logger.info("Not a push to the main, master, or dev branch and not a relevant pull request")
         
         return jsonify({'status': 'success'}), 200
 
