@@ -56,7 +56,13 @@ async def webhook():
         # Check for pull requests
         if 'pull_request' in data:
             pr = data['pull_request']
-            base_branch = pr['base']['ref']
+
+            base_branch = pr['base']['ref'].lower()  
+            
+            logger.info(f"Pull request base branch: {base_branch}")  
+            logger.info(f"Pull request state: {pr['state']}")
+
+
             if pr['state'] in ['open', 'closed'] and base_branch in ['main', 'master', 'dev']:
                 pr_message = (f"Pull request by {pr['user']['login']}:\n"
                               f"Branch: {pr['head']['ref']} -> {base_branch}\n"
