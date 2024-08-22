@@ -17,14 +17,21 @@ logger.info(f"BOT_TOKEN: {BOT_TOKEN}")
 
 REPO_UPDATE_MAPPING = {
     'portfolio_v2': {
-        'head_commit': [-1002175201609],
-        'pull_request': [-1002175201609, -4192197568],
+        'head_commit': [7483219211],
+        'pull_request': [7483219211],
     },
     'abovo-web-employers': {
         'head_commit': [7483219211],
         'pull_request': [7483219211]
     },
 }
+
+"""
+    'portfolio_v2': {
+        'head_commit': [-1002175201609],
+        'pull_request': [-1002175201609, -4192197568],
+    },
+"""
 
 # Special chat ID for additional notifications on pull request
 SPECIAL_CHAT_ID = 7483219211  # -4192197568
@@ -55,6 +62,7 @@ async def webhook():
 
         # Check for pull requests
         if 'pull_request' in data:
+            logger.info("Pull request event detected")
             pr = data['pull_request']
 
             base_branch = pr['base']['ref'].lower()  
