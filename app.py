@@ -62,16 +62,19 @@ async def webhook():
         # Check for pull requests
         if 'pull_request' in data:
             pr = data['pull_request']
-            action = data['action']
-            base_branch = pr['base']['ref'].lower()
-            logger.info(f"Pull request action: {action}, base branch: {base_branch}")
 
-            if base_branch in ['main', 'master', 'dev']:
-                pr_message = (f"Pull request {action} by {pr['user']['login']}:\n"
-                              f"Branch: {pr['head']['ref']} -> {base_branch}\n"
-                              f"Title: {pr['title']}\n"
-                              f"Description: {pr['body']}\n"
-                              f"Link: {pr['html_url']}")
+            base_branch = pr['base']['ref'].lower()  
+            
+            logger.info(f"Pull request base branch: {base_branch}")  
+            logger.info(f"Pull request state: {pr['state']}")
+
+
+            if pr['state'] == 'open' and base_branch in ['main', 'master', 'dev']:
+                pr_message = (f"Pull request by {pr['user']['login']}:\n"
+                            f"Branch: {pr['head']['ref']} -> {base_branch}\n"
+                            f"Message: {pr['title']}\n"
+                            f"Commit message: {pr['body']}\n"
+                            f"Link: {pr['html_url']}")
                 logger.info(f"Sending pull request message: {pr_message}")
 
                 for chat_id in update_mapping['pull_request']:
