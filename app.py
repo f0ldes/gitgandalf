@@ -38,13 +38,13 @@ SPECIAL_CHAT_ID = 7483219211  # -4192197568
 
 tg_request = HTTPXRequest(connection_pool_size=10)
 bot = telegram.Bot(token=BOT_TOKEN, request=tg_request)
-
 async def send_message(chat_id, text):
     try:
         await bot.send_message(chat_id=chat_id, text=text)
         logger.info(f"Message sent to {chat_id}")
     except Exception as e:
         logger.error(f"Error sending message to {chat_id}: {e}")
+
 @app.route('/webhook', methods=['POST'])
 async def webhook():
     logger.info("Webhook received!")
@@ -62,15 +62,15 @@ async def webhook():
         # Check for pull requests
         if 'pull_request' in data:
             pr = data['pull_request']
+            action = data['action']
             base_branch = pr['base']['ref'].lower()
-            logger.info(f"Pull request base branch: {base_branch}")
-            logger.info(f"Pull request state: {pr['state']}")
+            logger.info(f"Pull request action: {action}, base branch: {base_branch}")
 
             if base_branch in ['main', 'master', 'dev']:
-                pr_message = (f"Pull request by {pr['user']['login']}:\n"
+                pr_message = (f"Pull request {action} by {pr['user']['login']}:\n"
                               f"Branch: {pr['head']['ref']} -> {base_branch}\n"
-                              f"Message: {pr['title']}\n"
-                              f"Commit message: {pr['body']}\n"
+                              f"Title: {pr['title']}\n"
+                              f"Description: {pr['body']}\n"
                               f"Link: {pr['html_url']}")
                 logger.info(f"Sending pull request message: {pr_message}")
 
