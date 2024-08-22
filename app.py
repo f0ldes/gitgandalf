@@ -55,6 +55,7 @@ async def webhook():
 
         # Check for pull requests
         if 'pull_request' in data:
+            logger.info("Pull request event detected")
             pr = data['pull_request']
 
             base_branch = pr['base']['ref'].lower()  
