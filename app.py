@@ -21,8 +21,8 @@ REPO_UPDATE_MAPPING = {
         'pull_request': [-1002161349087],
     },
     'abovo-web-employers': {
-        'head_commit': [7483219211],
-        'pull_request': [7483219211]
+        'head_commit': [-1002161349087],
+        'pull_request': [-1002161349087]
     },
 }
 
