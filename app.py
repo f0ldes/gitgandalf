@@ -17,8 +17,8 @@ logger.info(f"BOT_TOKEN: {BOT_TOKEN}")
 
 REPO_UPDATE_MAPPING = {
     'portfolio_v2': {
-        'head_commit': [7483219211],
-        'pull_request': [7483219211],
+        'head_commit': [-1002161349087],
+        'pull_request': [-1002161349087],
     },
     'abovo-web-employers': {
         'head_commit': [7483219211],
@@ -45,7 +45,6 @@ async def send_message(chat_id, text):
         logger.info(f"Message sent to {chat_id}")
     except Exception as e:
         logger.error(f"Error sending message to {chat_id}: {e}")
-
 @app.route('/webhook', methods=['POST'])
 async def webhook():
     logger.info("Webhook received!")
@@ -62,16 +61,12 @@ async def webhook():
 
         # Check for pull requests
         if 'pull_request' in data:
-            logger.info("Pull request event detected")
             pr = data['pull_request']
-
-            base_branch = pr['base']['ref'].lower()  
-            
-            logger.info(f"Pull request base branch: {base_branch}")  
+            base_branch = pr['base']['ref'].lower()
+            logger.info(f"Pull request base branch: {base_branch}")
             logger.info(f"Pull request state: {pr['state']}")
 
-
-            if pr['state'] in ['open', 'closed'] and base_branch in ['main', 'master', 'dev']:
+            if base_branch in ['main', 'master', 'dev']:
                 pr_message = (f"Pull request by {pr['user']['login']}:\n"
                               f"Branch: {pr['head']['ref']} -> {base_branch}\n"
                               f"Message: {pr['title']}\n"
@@ -82,24 +77,27 @@ async def webhook():
                 for chat_id in update_mapping['pull_request']:
                     await send_message(chat_id, pr_message)
 
-     
                 await send_message(SPECIAL_CHAT_ID, pr_message)
 
-        elif 'ref' in data and (data['ref'] == 'refs/heads/main' or data['ref'] == 'refs/heads/master' or data['ref'] == 'refs/heads/dev'):
-            logger.info("Push to main, master, or dev branch detected")
-            if 'head_commit' in data and 'head_commit' in update_mapping:
-                commit = data['head_commit']
-                branch = data['ref'].split('/')[-1]
-                message = (f"New push to {branch} by {commit['author']['name']}:\n"
-                           f"Branch: {branch}\n"
-                           f"Message: {commit['message']}\n"
-                           f"Link: {commit['url']}")
-                logger.info(f"Sending message: {message}")
+        # Check for direct pushes to main, master, or dev
+        elif 'ref' in data:
+            ref_branch = data['ref'].split('/')[-1].lower()
+            logger.info(f"Push event detected to branch: {ref_branch}")
+            
+            if ref_branch in ['main', 'master', 'dev']:
+                logger.info(f"Push to {ref_branch} branch detected")
+                if 'head_commit' in data and 'head_commit' in update_mapping:
+                    commit = data['head_commit']
+                    message = (f"New push to {ref_branch} by {commit['author']['name']}:\n"
+                               f"Branch: {ref_branch}\n"
+                               f"Message: {commit['message']}\n"
+                               f"Link: {commit['url']}")
+                    logger.info(f"Sending message: {message}")
 
-                # Send message to all mapped chat IDs for head_commit
-                for chat_id in update_mapping['head_commit']:
-                    await send_message(chat_id, message)
-
+                    # Send message to all mapped chat IDs for head_commit
+                    for chat_id in update_mapping['head_commit']:
+                        await send_message(chat_id, message)
+        
         else:
             logger.info("Not a push to the main, master, or dev branch and not a relevant pull request")
         
